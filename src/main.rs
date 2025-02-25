@@ -15,16 +15,23 @@ fn main() -> eframe::Result {
             //     eframe::icon_data::from_png_bytes(&include_bytes!("../assets/icon-256.png")[..])
             //         .expect("Failed to load icon"),
             // )
-            .with_close_button(false)
             .with_title("")
-            .with_maximize_button(false)
             .with_resizable(true)
-            .with_minimize_button(false)
             // .with_always_on_top()
-            .with_titlebar_buttons_shown(false)
             // .with_mouse_passthrough(true)
             .with_active(true)
-            .with_transparent(true)
+            .with_transparent(false)
+            .with_decorations(true)
+            .with_always_on_top()
+            .with_close_button(true)
+            .with_maximize_button(false)
+            .with_minimize_button(false)
+            // Window modifiers exclusive to macOS
+            .with_titlebar_buttons_shown(false)
+            .with_titlebar_shown(false)
+            .with_fullsize_content_view(true)
+            // Window modifiers exclusive to Windows
+            .with_taskbar(false)
             ,
         ..Default::default()
     };

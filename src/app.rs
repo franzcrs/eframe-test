@@ -66,6 +66,8 @@ impl eframe::App for TemplateApp {
         // });
 
         // egui::CentralPanel::default().show(ctx, |ui| {
+        //     ui.heading("Hello World!");
+        // });
         //     // The central panel the region left after adding TopPanel's and SidePanel's
         //     ui.heading("eframe template");
 
@@ -94,8 +96,11 @@ impl eframe::App for TemplateApp {
     }
 
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
-        _visuals.window_fill().to_normalized_gamma_f32()
+      // _visuals.window_fill().to_normalized_gamma_f32()
+      // egui::Color32::from_gray(27).to_normalized_gamma_f32()
+      egui::Color32::from_rgb(34, 32, 29).to_normalized_gamma_f32()
     }
+
 }
 
 fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
