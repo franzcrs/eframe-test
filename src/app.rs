@@ -1,11 +1,11 @@
 use egui::Color32;
 use egui::FontData;
 use egui::FontDefinitions;
-use egui::Vec2;
 use egui::{FontFamily, FontId};
 use std::collections::BTreeMap;
 
 use egui::TextStyle::*;
+use egui::epaint::Margin;
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -13,6 +13,9 @@ use egui::TextStyle::*;
 pub struct TemplateApp {
     // Example stuff:
     label: String,
+    stroke_color: Color32,
+    is_focused: bool,
+    selection_color: Color32,
 
     #[serde(skip)] // This how you opt-out of serialization of a field
     value: f32,
@@ -24,6 +27,9 @@ impl Default for TemplateApp {
             // Example stuff:
             label: "untitled folder".to_owned(),
             value: 2.7,
+            stroke_color: Color32::TRANSPARENT,
+            is_focused: false,
+            selection_color: Color32::from_rgb(71,98,135),
         }
     }
 }
@@ -61,8 +67,19 @@ impl TemplateApp {
             ),
         );
 
+        // System Text Regular
+        // 1st option
+        fonts.font_data.insert(
+            "system-text-regular-1".to_owned(),
+            std::sync::Arc::new(
+                // 1st option
+                FontData::from_static(include_bytes!("/Library/Fonts/SF-Pro-Text-Medium.otf")),
+            ),
+        );
+        // 2nd option
+
         // Create a new font family
-        // Reference: https://stackoverflow.com/questions/78069584/how-to-set-a-new-fontfamily-to-my-egui-app
+        // Reference: https://github.com/emilk/egui/discussions/4449 | https://stackoverflow.com/questions/78069584/how-to-set-a-new-fontfamily-to-my-egui-app
 
         // System Text Heavy
         let mut newfam = BTreeMap::new();
@@ -72,6 +89,14 @@ impl TemplateApp {
                 "system-text-heavy-1".to_owned(),
                 "system-text-heavy-2".to_owned(),
             ],
+        );
+        fonts.families.append(&mut newfam);
+
+        // System Text Regular
+        newfam = BTreeMap::new();
+        newfam.insert(
+            FontFamily::Name("System-Text-Regular".into()),
+            vec!["system-text-regular-1".to_owned()],
         );
         fonts.families.append(&mut newfam);
 
@@ -88,7 +113,7 @@ impl TemplateApp {
         // Reference: https://github.com/emilk/eframe_template/blob/main/src/app.rs | eframe-0.30.0/src/lib.rs
         cc.egui_ctx.set_fonts(fonts);
 
-        // Redefine text_styles
+        // Redefine text_styles adding new text styles
         // Reference: https://docs.rs/egui/latest/egui/style/struct.Style.html#structfield.text_styles
         let text_styles: BTreeMap<_, _> = [
             (Heading, FontId::new(30.0, FontFamily::Proportional)),
@@ -99,6 +124,14 @@ impl TemplateApp {
             (
                 Name("DialogHeading".into()),
                 FontId::new(13.0, FontFamily::Name("System-Text-Heavy".into())),
+            ),
+            (
+                Name("DialogBody".into()),
+                FontId::new(11.0, FontFamily::Name("System-Text-Regular".into())),
+            ),
+            (
+                Name("TextInputBody".into()),
+                FontId::new(13.0, FontFamily::Name("System-Text-Regular".into())),
             ),
         ]
         .into();
@@ -130,20 +163,20 @@ impl eframe::App for TemplateApp {
 
         // Change CentralPanel default style with custom frame 
         // Reference: https://github.com/emilk/egui/discussions/1286
-        let my_frame = egui::containers::Frame {
-            inner_margin: egui::epaint::Margin {
+        let dialog_frame = egui::containers::Frame {
+            inner_margin: Margin {
                 left: 0.,
                 right: 0.,
                 top: 0.,
                 bottom: 0.,
             },
-            outer_margin: egui::epaint::Margin {
-                // left: 0.,
-                // right: 0.,
-                // top: 20.5,
-                // bottom: 20.5,
-                left: 20.5,
-                right: 20.5,
+            outer_margin: Margin {
+                // left: 20.5-3.5,
+                // right: 20.5-3.5,
+                // top: 0.,
+                // bottom: 0.,
+                left: 20.5-3.5,
+                right: 20.5-3.5,
                 top: 20.5,
                 bottom: 20.5,
             },
@@ -158,33 +191,86 @@ impl eframe::App for TemplateApp {
             stroke: egui::Stroke::new(0.0, Color32::LIGHT_GRAY),
             ..Default::default()
         };
+        let text_box_frame = egui::containers::Frame {
+            inner_margin: Margin {
+                left: 0.,
+                right: 0.,
+                top: 0.,
+                bottom: 0.,
+            },
+            outer_margin: Margin {
+                left: 0.2,
+                right: 0.2,
+                top: 0.2,
+                bottom: 0.2,
+            },
+            rounding: egui::Rounding {
+                nw: 0.0,
+                ne: 0.0,
+                sw: 0.0,
+                se: 0.0,
+            },
+            shadow: eframe::epaint::Shadow::NONE,
+            fill: Color32::from_rgb(44, 43, 40),
+            stroke: egui::Stroke::new(0.15, Color32::from_rgb(83, 82,82)),
+            ..Default::default()
+        };
+        let text_box_stroke = egui::containers::Frame {
+            inner_margin: Margin {
+                left: 3.5,
+                right: 3.5,
+                top: 3.5,
+                bottom: 3.5,
+            },
+            outer_margin: Margin {
+                left: 0.,
+                right: 0.,
+                top: 0.,
+                bottom: 0.,
+            },
+            rounding: egui::Rounding {
+                nw: 3.,
+                ne: 3.,
+                sw: 3.,
+                se: 3.,
+            },
+            shadow: eframe::epaint::Shadow::NONE,
+            fill: self.stroke_color, // fill: Color32::from_rgb(56, 100, 138),
+            stroke: egui::Stroke::new(0.0, Color32::WHITE),
+            ..Default::default()
+        };
+        // Store a reference to our text edit output for later use
+        let mut text_edit_output = None;
         egui::CentralPanel::default()
-            .frame(my_frame)
+            .frame(dialog_frame)
             .show(ctx, |ui| {
                 // egui::CentralPanel::default().show(ctx, |ui| {
 
-                // Reference: https://github.com/emilk/egui/discussions/3933 | https://docs.rs/egui/0.30.0/egui/struct.Ui.html#method.set_row_height | https://docs.rs/egui/0.30.0/egui/struct.Ui.html#method.horizontal
-                // ui.set_row_height(30.0);
-                // ui.style_mut().spacing.interact_size.y = 30.0; // horizontal layout and the spacing.interact_size.y modifies the height of the first row of layout and button widgets so NOT USEFUL
-                // ui.horizontal(|ui| {
+                ui.horizontal(|ui| {
+                    ui.add_space(3.5);
+                    // Reference: https://github.com/emilk/egui/discussions/3933 | https://docs.rs/egui/0.30.0/egui/struct.Ui.html#method.set_row_height | https://docs.rs/egui/0.30.0/egui/struct.Ui.html#method.horizontal
+                    // ui.set_row_height(30.0);
+                    // ui.style_mut().spacing.interact_size.y = 30.0; // horizontal layout and the spacing.interact_size.y modifies the height of the first row of layout and button widgets so NOT USEFUL
+                    // ui.horizontal(|ui| {
 
-                // Reference: egui-0.30.0/src/ui.rs
-                ui.allocate_ui_with_layout( Vec2::new(120., 16.), egui::Layout::left_to_right(egui::Align::BOTTOM), |ui| {
-                    ui.label(
-                        egui::RichText::new("New Folder")
-                            .color(egui::Color32::from_rgb(221, 221, 221))
-                            .text_style(Name("DialogHeading".into()))
-                            // .font(FontId {
-                            //     // size: 13.2,
-                            //     // size: 13.5,
-                            //     size: 12.5,
-                            //     family: FontFamily::Name("System-Text-Heavy".into()),
-                            // })
-                            // .line_height(Some(40.0)) // Create space below the text
-                            // .extra_letter_spacing(0.1)
-                            // .strong()
-                            ,
-                    );
+                    // Reference: egui-0.30.0/src/ui.rs
+                    ui.allocate_ui_with_layout([f32::INFINITY, 16.].into(), egui::Layout::left_to_right(egui::Align::BOTTOM), |ui| {
+                        ui.label(
+                            egui::RichText::new("New Folder")
+                                .color(Color32::from_rgb(221, 221, 221))
+                                .text_style(Name("DialogHeading".into()))
+                                // .font(FontId {
+                                //     // size: 13.2,
+                                //     // size: 13.5,
+                                //     size: 12.5,
+                                //     family: FontFamily::Name("System-Text-Heavy".into()),
+                                // })
+                                // .line_height(Some(40.0)) // Create space below the text
+                                // .extra_letter_spacing(0.1)
+                                // .strong()
+                                ,
+                        );
+                    });
                 });
 
                 // ui.label(
@@ -203,22 +289,96 @@ impl eframe::App for TemplateApp {
                 //             family: FontFamily::Monospace,
                 //         }),
                 // );
+                ui.horizontal(|ui| {
+                    ui.add_space(3.5);
+                    ui.allocate_ui_with_layout([f32::INFINITY, 35.].into(), egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
+                        ui.label(
+                            egui::RichText::new("“current folder”:")
+                                .color(Color32::from_rgb(221, 221, 221))
+                                .text_style(Name("DialogBody".into()))
+                                .font(FontId {
+                                  size: 11.2, 
+                                  family: FontFamily::Name("System-Text-Regular".into())
+                                })
+                                ,
+                        );
+                        ui.label(
+                            egui::RichText::new("Name of new folder inside")
+                                .color(Color32::from_rgb(221, 221, 221))
+                                .text_style(Name("DialogBody".into()))
+                                .line_height(Some(11.)) // Create space below the text
+                                ,
+                        );
+                    });
+                });
+                ui.add_space(6.0);
+                // ui.add(
+                //     egui::TextEdit::singleline(&mut self.label)
+                //         // .hint_text("Type something...") // Placeholder text
+                //         .desired_width(f32::INFINITY) // Make it take full width
+                //         .font(Name("TextInputBody".into()))
+                //         .margin(Margin::symmetric(4.0, 0.5))
+                //         .background_color(Color32::from_rgb(44, 43, 40))
+                //         .text_color(Color32::from_rgb(221, 221, 221))
+                //         .frame(false)
+                //         //TODO: Create a frame or a window area to change the stroke style of the textedit widget
+                //         ,
+                // );
+                text_box_stroke.show(ui, |ui| {
+                    text_box_frame.show(ui, |ui| {
+                        let visuals = ui.visuals_mut();
+                        // visuals.selection.stroke = egui::Stroke::new(2.0, Color32::RED); // Change stroke color
+                        visuals.selection.bg_fill = self.selection_color; // Change background fill color
+                        // ui.add(
+                        //     egui::TextEdit::singleline(&mut self.label)
+                        //         // .hint_text("Type something...") // Placeholder text
+                        //         .desired_width(f32::INFINITY) // Make it take full width
+                        //         .font(Name("TextInputBody".into()))
+                        //         .margin(Margin::symmetric(4.0, 1.))
+                        //         .background_color(Color32::from_rgb(44, 43, 40))
+                        //         .text_color(Color32::from_rgb(221, 221, 221))
+                        //         .frame(false)
+                        //         .lock_focus(true)
+                        //         ,
+                        // );
+                        // Use show() instead of ui.add() to get the output state
+                        let output = egui::TextEdit::singleline(&mut self.label)
+                            .desired_width(f32::INFINITY)
+                            .font(Name("TextInputBody".into()))
+                            .margin(Margin::symmetric(4.0, 1.))
+                            .background_color(Color32::from_rgb(44, 43, 40))
+                            .text_color(Color32::from_rgb(221, 221, 221))
+                            .frame(false)
+                            .lock_focus(true)
+                            .show(ui);
+                    
+                        // Select all text by setting cursor range from 0 to end of text, on focus
+                        // Reference: https://stackoverflow.com/questions/74324236/select-the-text-of-a-textedit-object-in-egui
+                        // use egui::{text::CCursor, text::CCursorRange};
+                        // if output.response.gained_focus() { // If the widget is focused
+                        // // if self.is_focused {
+                        //     output.state.cursor.set_char_range(Some(
+                        //         CCursorRange::two(
+                        //             CCursor::new(0),
+                        //             CCursor::new(self.label.len())
+                        //         )
+                        //     ));
+                        //     // Apply the changes
+                        //     output.state.store(ui.ctx(), output.response.id);
+                        // }
 
-                ui.label("Name of new folder inside the current folder");
-                ui.add(
-                    egui::TextEdit::singleline(&mut self.label)
-                        .hint_text("Type something...") // Placeholder text
-                        .desired_width(f32::INFINITY) // Make it take full width
-                        .font(egui::TextStyle::Monospace), // Use monospace font
-                );
+                        // Store output for later use outside of this UI closure
+                        text_edit_output = Some(output);
+                    });
+                });
+
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::BOTTOM), |ui| {
-                    // ui.label("world!");
-                    // ui.label("Hello");
+                    ui.add_space(3.5);
                     // Primary button (Create) - Blue with white text
                     let create_button = egui::Button::new(
                         egui::RichText::new("Create").color(egui::Color32::WHITE),
                     )
-                    .fill(egui::Color32::from_rgb(0, 122, 255)) // macOS blue
+                    .fill(Color32::from_rgb(0, 122, 255)) // macOS blue
                     .rounding(egui::Rounding::same(6.0)); // macOS rounded corners
 
                     if ui.add(create_button).clicked() {
@@ -247,6 +407,40 @@ impl eframe::App for TemplateApp {
                     }
                 });
             });
+        // Check if the egui window is focused.
+        // Reference: https://docs.rs/egui/0.30.0/egui/struct.Context.html#method.input
+        self.is_focused = ctx.input(|i| i.focused);
+        if self.is_focused {
+            // Update the stroke color based on focus
+            self.stroke_color = Color32::from_rgb(56, 100, 138);
+            // Update the selection color based on focus
+            self.selection_color = Color32::from_rgb(71,98,135);
+            // Select all text in TextEdit widget on a specific condition
+            // Reference: https://stackoverflow.com/questions/74324236/select-the-text-of-a-textedit-object-in-egui
+            if let Some(mut output) = text_edit_output {
+                use egui::{text::CCursor, text::CCursorRange};
+                // Defining the selection of text if the widget is focused
+                if output.response.gained_focus() {
+                    output.state.cursor.set_char_range(Some(
+                        CCursorRange::two(
+                            CCursor::new(0),
+                            CCursor::new(self.label.len())
+                        )
+                        //TODO: track the cursor position and set the cursor range to the current cursor position
+                    ));
+                    // Apply the changes
+                    output.state.store(ctx, output.response.id);
+                }
+                // Request focus on the TextEdit widget
+                output.response.request_focus();
+            }
+        }
+        else {
+            // Update the stroke color based on focus
+            self.stroke_color = Color32::TRANSPARENT;
+            // Update the selection color based on focus
+            self.selection_color = Color32::from_rgb(70,70,70);
+        }
         //     // The central panel the region left after adding TopPanel's and SidePanel's
         //     ui.heading("eframe template");
 
@@ -277,7 +471,7 @@ impl eframe::App for TemplateApp {
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
         // _visuals.window_fill().to_normalized_gamma_f32()
         // egui::Color32::from_gray(27).to_normalized_gamma_f32()
-        egui::Color32::from_rgb(33, 32, 29).to_normalized_gamma_f32()
+        Color32::from_rgb(33, 32, 29).to_normalized_gamma_f32()
     }
 }
 
