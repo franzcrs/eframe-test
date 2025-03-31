@@ -1,6 +1,9 @@
+use egui::frame;
 use egui::Color32;
 use egui::FontData;
 use egui::FontDefinitions;
+use egui::Stroke;
+use egui::Vec2;
 use egui::{FontFamily, FontId};
 use std::collections::BTreeMap;
 
@@ -16,6 +19,7 @@ pub struct TemplateApp {
     stroke_color: Color32,
     is_focused: bool,
     selection_color: Color32,
+    ok_button_color: Color32,
 
     #[serde(skip)] // This how you opt-out of serialization of a field
     value: f32,
@@ -29,7 +33,8 @@ impl Default for TemplateApp {
             value: 2.7,
             stroke_color: Color32::TRANSPARENT,
             is_focused: false,
-            selection_color: Color32::from_rgb(71,98,135),
+            selection_color: Color32::from_rgb(71,98,135), // macOS text selection color
+            ok_button_color: Color32::from_rgb(48, 98, 212), // macOS blue button color
         }
     }
 }
@@ -67,13 +72,22 @@ impl TemplateApp {
             ),
         );
 
-        // System Text Regular
+        // System Text Medium
         // 1st option
         fonts.font_data.insert(
-            "system-text-regular-1".to_owned(),
+            "system-text-medium-1".to_owned(),
             std::sync::Arc::new(
-                // 1st option
                 FontData::from_static(include_bytes!("/Library/Fonts/SF-Pro-Text-Medium.otf")),
+            ),
+        );
+        // 2nd option
+
+        // System Display Medium
+        // 1st option
+        fonts.font_data.insert(
+            "system-display-medium-1".to_owned(),
+            std::sync::Arc::new(
+                FontData::from_static(include_bytes!("/Library/Fonts/SF-Pro-Display-Medium.otf")),
             ),
         );
         // 2nd option
@@ -92,11 +106,19 @@ impl TemplateApp {
         );
         fonts.families.append(&mut newfam);
 
-        // System Text Regular
+        // System Text Medium
         newfam = BTreeMap::new();
         newfam.insert(
-            FontFamily::Name("System-Text-Regular".into()),
-            vec!["system-text-regular-1".to_owned()],
+            FontFamily::Name("System-Text-Medium".into()),
+            vec!["system-text-medium-1".to_owned()],
+        );
+        fonts.families.append(&mut newfam);
+
+        // System Display Medium
+        newfam = BTreeMap::new();
+        newfam.insert(
+            FontFamily::Name("System-Display-Medium".into()),
+            vec!["system-display-medium-1".to_owned()],
         );
         fonts.families.append(&mut newfam);
 
@@ -127,12 +149,16 @@ impl TemplateApp {
             ),
             (
                 Name("DialogBody".into()),
-                FontId::new(11.0, FontFamily::Name("System-Text-Regular".into())),
+                FontId::new(11.0, FontFamily::Name("System-Text-Medium".into())),
             ),
             (
                 Name("TextInputBody".into()),
-                FontId::new(13.0, FontFamily::Name("System-Text-Regular".into())),
+                FontId::new(13.0, FontFamily::Name("System-Text-Medium".into())),
             ),
+            (
+                Name("ButtonBody".into()),
+                FontId::new(13.5, FontFamily::Name("System-Display-Medium".into())),
+            )
         ]
         .into();
 
@@ -177,8 +203,8 @@ impl eframe::App for TemplateApp {
                 // bottom: 0.,
                 left: 20.5-3.5,
                 right: 20.5-3.5,
-                top: 20.5,
-                bottom: 20.5,
+                top: 19.5,
+                bottom: 20.,
             },
             rounding: egui::Rounding {
                 nw: 1.0,
@@ -298,7 +324,7 @@ impl eframe::App for TemplateApp {
                                 .text_style(Name("DialogBody".into()))
                                 .font(FontId {
                                   size: 11.2, 
-                                  family: FontFamily::Name("System-Text-Regular".into())
+                                  family: FontFamily::Name("System-Text-Medium".into())
                                 })
                                 ,
                         );
@@ -311,7 +337,7 @@ impl eframe::App for TemplateApp {
                         );
                     });
                 });
-                ui.add_space(6.0);
+                ui.add_space(4.5);
                 // ui.add(
                 //     egui::TextEdit::singleline(&mut self.label)
                 //         // .hint_text("Type something...") // Placeholder text
@@ -345,7 +371,7 @@ impl eframe::App for TemplateApp {
                         let output = egui::TextEdit::singleline(&mut self.label)
                             .desired_width(f32::INFINITY)
                             .font(Name("TextInputBody".into()))
-                            .margin(Margin::symmetric(4.0, 1.))
+                            .margin(Margin::symmetric(3.0, 1.))
                             .background_color(Color32::from_rgb(44, 43, 40))
                             .text_color(Color32::from_rgb(221, 221, 221))
                             .frame(false)
@@ -373,13 +399,29 @@ impl eframe::App for TemplateApp {
                 });
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::BOTTOM), |ui| {
-                    ui.add_space(3.5);
+                    ui.add_space(3.);
+
+                    // Custom button styles
+                    // Reference: button.rs | 
+                    let styles = ui.style_mut();
+                    styles.spacing.button_padding = egui::vec2(10.0, 2.0);
+                    // styles.visuals.widgets.hovered.fg_stroke = Stroke::new(0.0, Color32::TRANSPARENT);
+                    styles.visuals.widgets.hovered.expansion = 0.0;
+                    styles.visuals.widgets.active.expansion = 0.0;
+
                     // Primary button (Create) - Blue with white text
                     let create_button = egui::Button::new(
-                        egui::RichText::new("Create").color(egui::Color32::WHITE),
+                        egui::RichText::new("Create")
+                        .color(egui::Color32::from_rgb(221, 221, 221))
+                        .text_style(Name("ButtonBody".into()))
+                        .extra_letter_spacing(0.2),
                     )
-                    .fill(Color32::from_rgb(0, 122, 255)) // macOS blue
-                    .rounding(egui::Rounding::same(6.0)); // macOS rounded corners
+                    .fill(self.ok_button_color) // macOS blue
+                    .rounding(egui::Rounding::same(5.0)) // macOS rounded corners
+                    .frame(true)
+                    .min_size(Vec2::new(61., 20.))
+                    .stroke(Stroke::new(0.0, Color32::TRANSPARENT))
+                    ;
 
                     if ui.add(create_button).clicked() {
                         // Handle create button click
@@ -393,11 +435,22 @@ impl eframe::App for TemplateApp {
                         // Text Style Height = 12.35
                     }
 
-                    ui.add_space(8.0); // Space between buttons
+                    ui.add_space(0.1); // Space between buttons
 
                     // Secondary button (Cancel) - Light gray with default text
-                    let cancel_button =
-                        egui::Button::new("Cancel").rounding(egui::Rounding::same(6.0));
+                    let cancel_button = egui::Button::new(
+                        egui::RichText::new("Cancel")
+                        .color(egui::Color32::from_rgb(221, 221, 221))
+                        .text_style(Name("ButtonBody".into()))
+                        .extra_letter_spacing(0.2),
+                    )
+                    .fill(Color32::from_rgb(89, 88, 86)) // macOS gray button color
+                    .rounding(egui::Rounding::same(5.0)) // macOS rounded corners
+                    .frame(true)
+                    // .min_size(Vec2::new(61., 20.))
+                    .stroke(Stroke::new(0.0, Color32::TRANSPARENT))
+                    ;
+
 
                     if ui.add(cancel_button).clicked() {
                         // Handle cancel button click
@@ -414,7 +467,7 @@ impl eframe::App for TemplateApp {
             // Update the stroke color based on focus
             self.stroke_color = Color32::from_rgb(56, 100, 138);
             // Update the selection color based on focus
-            self.selection_color = Color32::from_rgb(71,98,135);
+            self.selection_color = Color32::from_rgb(71,98,135); // macOS text selection color
             // Select all text in TextEdit widget on a specific condition
             // Reference: https://stackoverflow.com/questions/74324236/select-the-text-of-a-textedit-object-in-egui
             if let Some(mut output) = text_edit_output {
@@ -434,12 +487,16 @@ impl eframe::App for TemplateApp {
                 // Request focus on the TextEdit widget
                 output.response.request_focus();
             }
+            // Update the color of the OK button based on focus
+            self.ok_button_color = Color32::from_rgb(48, 98, 212); // macOS blue button color
         }
         else {
             // Update the stroke color based on focus
             self.stroke_color = Color32::TRANSPARENT;
             // Update the selection color based on focus
-            self.selection_color = Color32::from_rgb(70,70,70);
+            self.selection_color = Color32::from_rgb(70,70,70); // macOS unfocused text selection color
+            // Update the color of the OK button based on focus
+            self.ok_button_color = Color32::from_rgb(89, 88, 86); // macOS gray button color
         }
         //     // The central panel the region left after adding TopPanel's and SidePanel's
         //     ui.heading("eframe template");
