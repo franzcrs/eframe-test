@@ -15,9 +15,12 @@ use egui::epaint::Margin;
 pub struct TemplateApp {
     // Example stuff:
     label: String,
+    #[serde(skip)] // This how you opt-out of serialization of a field
     stroke_color: Color32,
     is_focused: bool,
+    #[serde(skip)] // This how you opt-out of serialization of a field
     selection_color: Color32,
+    #[serde(skip)] // This how you opt-out of serialization of a field
     ok_button_color: Color32,
     current_folder: String,
 
@@ -267,7 +270,7 @@ impl eframe::App for TemplateApp {
             ..Default::default()
         };
         // Store a reference to our text edit output for later use
-        let mut text_edit_output = None;
+        // let mut text_edit_output = None;
         egui::CentralPanel::default()
             .frame(dialog_frame)
             .show(ctx, |ui| {
@@ -341,7 +344,6 @@ impl eframe::App for TemplateApp {
                 //         .background_color(Color32::from_rgb(44, 43, 40))
                 //         .text_color(Color32::from_rgb(221, 221, 221))
                 //         .frame(false)
-                //         //TODO: Create a frame or a window area to change the stroke style of the textedit widget
                 //         ,
                 // );
                 text_box_stroke.show(ui, |ui| {
@@ -362,7 +364,7 @@ impl eframe::App for TemplateApp {
                         //         ,
                         // );
                         // Use show() instead of ui.add() to get the output state
-                        let output = egui::TextEdit::singleline(&mut self.label)
+                        let mut output = egui::TextEdit::singleline(&mut self.label)
                             .desired_width(f32::INFINITY)
                             .font(Name("TextInputBody".into()))
                             .margin(Margin::symmetric(3.0, 1.))
@@ -371,24 +373,27 @@ impl eframe::App for TemplateApp {
                             .frame(false)
                             .lock_focus(true)
                             .show(ui);
-                    
+
+                        // Request focus on the TextEdit widget, once on first rendering
+                        output.response.request_focus();
+
                         // Select all text by setting cursor range from 0 to end of text, on focus
                         // Reference: https://stackoverflow.com/questions/74324236/select-the-text-of-a-textedit-object-in-egui
-                        // use egui::{text::CCursor, text::CCursorRange};
-                        // if output.response.gained_focus() { // If the widget is focused
-                        // // if self.is_focused {
-                        //     output.state.cursor.set_char_range(Some(
-                        //         CCursorRange::two(
-                        //             CCursor::new(0),
-                        //             CCursor::new(self.label.len())
-                        //         )
-                        //     ));
-                        //     // Apply the changes
-                        //     output.state.store(ui.ctx(), output.response.id);
-                        // }
+                        use egui::{text::CCursor, text::CCursorRange};
+                        if output.response.gained_focus() { // If the widget is focused
+                        // if self.is_focused {
+                            output.state.cursor.set_char_range(Some(
+                                CCursorRange::two(
+                                    CCursor::new(0),
+                                    CCursor::new(self.label.len())
+                                )
+                            ));
+                            // Apply the changes
+                            output.state.store(ui.ctx(), output.response.id);
+                        }
 
                         // Store output for later use outside of this UI closure
-                        text_edit_output = Some(output);
+                        // text_edit_output = Some(output);
                     });
                 });
 
@@ -421,11 +426,16 @@ impl eframe::App for TemplateApp {
                         println!("Create clicked with value: {}", self.label);
                         // Reference: egui-0.30.0/src/ui.rs | https://github.com/emilk/egui/discussions/5340
                         let style_height = ui.text_style_height(&Name("DialogHeading".into()));
-                        println!("Text Style Height = {}", style_height)
-                        // When FontData is SF-Pro-Text-Heavy.otf
-                        // Text Style Height = 14.916992
-                        // When FontData is HelveticaNeueHeavy.otf
-                        // Text Style Height = 12.35
+                        println!("Text Style Height = {}", style_height);
+                        // Window size
+                        let window_size = ctx.screen_rect().size();
+                        println!("Window size = {:?}", window_size);
+                        // Window position
+                        let window_pos = ctx.screen_rect().min;
+                        println!("Window position = {:?}", window_pos);
+                        // Window center
+                        let window_center = ctx.screen_rect().center();
+                        println!("Window center = {:?}", window_center);
                     }
 
                     ui.add_space(0.1); // Space between buttons
@@ -463,22 +473,22 @@ impl eframe::App for TemplateApp {
             self.selection_color = Color32::from_rgb(71,98,135); // macOS text selection color
             // Select all text in TextEdit widget on a specific condition
             // Reference: https://stackoverflow.com/questions/74324236/select-the-text-of-a-textedit-object-in-egui
-            if let Some(mut output) = text_edit_output {
-                use egui::{text::CCursor, text::CCursorRange};
-                // Defining the selection of text if the widget is focused
-                if output.response.gained_focus() {
-                    output.state.cursor.set_char_range(Some(
-                        CCursorRange::two(
-                            CCursor::new(0),
-                            CCursor::new(self.label.len())
-                        )
-                    ));
-                    // Apply the changes
-                    output.state.store(ctx, output.response.id);
-                }
-                // Request focus on the TextEdit widget
-                output.response.request_focus();
-            }
+            // if let Some(mut output) = text_edit_output {
+            //     use egui::{text::CCursor, text::CCursorRange};
+            //     // Defining the selection of text if the widget is focused
+            //     if output.response.gained_focus() {
+            //         output.state.cursor.set_char_range(Some(
+            //             CCursorRange::two(
+            //                 CCursor::new(0),
+            //                 CCursor::new(self.label.len())
+            //             )
+            //         ));
+            //         // Apply the changes
+            //         output.state.store(ctx, output.response.id);
+            //     }
+            //     // Request focus on the TextEdit widget
+            //     output.response.request_focus();
+            // }
             // Update the color of the OK button based on focus
             self.ok_button_color = Color32::from_rgb(48, 98, 212); // macOS blue button color
         }

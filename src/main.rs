@@ -8,7 +8,7 @@ fn main() -> eframe::Result {
 
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size([600.0, 600.0])
+            .with_inner_size([321.0, 165.0]) //[321.0, 165.0]
             // .with_min_inner_size([300.0, 220.0])
             // .with_icon(
             //     // NOTE: Adding an icon is optional
@@ -17,12 +17,11 @@ fn main() -> eframe::Result {
             // )
             .with_title("")
             .with_resizable(true)
-            // .with_always_on_top()
             // .with_mouse_passthrough(true)
             .with_active(true)
             .with_transparent(false)
             .with_decorations(true)
-            .with_always_on_top()
+            // .with_always_on_top()
             .with_close_button(true)
             .with_maximize_button(false)
             .with_minimize_button(false)
