@@ -1,4 +1,3 @@
-use egui::frame;
 use egui::Color32;
 use egui::FontData;
 use egui::FontDefinitions;
@@ -20,6 +19,7 @@ pub struct TemplateApp {
     is_focused: bool,
     selection_color: Color32,
     ok_button_color: Color32,
+    current_folder: String,
 
     #[serde(skip)] // This how you opt-out of serialization of a field
     value: f32,
@@ -29,12 +29,13 @@ impl Default for TemplateApp {
     fn default() -> Self {
         Self {
             // Example stuff:
-            label: "untitled folder".to_owned(),
+            label: String::from("untitled folder"),
             value: 2.7,
             stroke_color: Color32::TRANSPARENT,
             is_focused: false,
             selection_color: Color32::from_rgb(71,98,135), // macOS text selection color
             ok_button_color: Color32::from_rgb(48, 98, 212), // macOS blue button color
+            current_folder: String::from("current folder name"),
         }
     }
 }
@@ -152,6 +153,10 @@ impl TemplateApp {
                 FontId::new(11.0, FontFamily::Name("System-Text-Medium".into())),
             ),
             (
+              Name("DialogFolderName".into()),
+              FontId::new(11.5, FontFamily::Name("System-Text-Medium".into())),
+          ),
+            (
                 Name("TextInputBody".into()),
                 FontId::new(13.0, FontFamily::Name("System-Text-Medium".into())),
             ),
@@ -197,10 +202,6 @@ impl eframe::App for TemplateApp {
                 bottom: 0.,
             },
             outer_margin: Margin {
-                // left: 20.5-3.5,
-                // right: 20.5-3.5,
-                // top: 0.,
-                // bottom: 0.,
                 left: 20.5-3.5,
                 right: 20.5-3.5,
                 top: 19.5,
@@ -281,21 +282,14 @@ impl eframe::App for TemplateApp {
 
                     // Reference: egui-0.30.0/src/ui.rs
                     ui.allocate_ui_with_layout([f32::INFINITY, 16.].into(), egui::Layout::left_to_right(egui::Align::BOTTOM), |ui| {
-                        ui.label(
-                            egui::RichText::new("New Folder")
-                                .color(Color32::from_rgb(221, 221, 221))
-                                .text_style(Name("DialogHeading".into()))
-                                // .font(FontId {
-                                //     // size: 13.2,
-                                //     // size: 13.5,
-                                //     size: 12.5,
-                                //     family: FontFamily::Name("System-Text-Heavy".into()),
-                                // })
-                                // .line_height(Some(40.0)) // Create space below the text
-                                // .extra_letter_spacing(0.1)
-                                // .strong()
-                                ,
-                        );
+                        ui.add(
+                            egui::Label::new(
+                                egui::RichText::new("New Folder".to_owned())
+                                    .color(Color32::from_rgb(221, 221, 221))
+                                    .text_style(Name("DialogHeading".into()))
+                                    ,)
+                                .selectable(false)
+                          );
                     });
                 });
 
@@ -318,22 +312,22 @@ impl eframe::App for TemplateApp {
                 ui.horizontal(|ui| {
                     ui.add_space(3.5);
                     ui.allocate_ui_with_layout([f32::INFINITY, 35.].into(), egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
-                        ui.label(
-                            egui::RichText::new("“current folder”:")
-                                .color(Color32::from_rgb(221, 221, 221))
-                                .text_style(Name("DialogBody".into()))
-                                .font(FontId {
-                                  size: 11.2, 
-                                  family: FontFamily::Name("System-Text-Medium".into())
-                                })
-                                ,
+                        ui.add(
+                            egui::Label::new(
+                                egui::RichText::new("“".to_owned() + &self.current_folder + "”:")
+                                    .color(Color32::from_rgb(221, 221, 221))
+                                    .text_style(Name("DialogFolderName".into()))
+                                    ,)
+                                .selectable(false)
                         );
-                        ui.label(
-                            egui::RichText::new("Name of new folder inside")
-                                .color(Color32::from_rgb(221, 221, 221))
-                                .text_style(Name("DialogBody".into()))
-                                .line_height(Some(11.)) // Create space below the text
-                                ,
+                        ui.add(
+                            egui::Label::new(
+                                egui::RichText::new("Name of new folder inside")
+                                    .color(Color32::from_rgb(221, 221, 221))
+                                    .text_style(Name("DialogBody".into()))
+                                    .line_height(Some(11.)) // Create space below the text
+                                    ,)
+                                .selectable(false)
                         );
                     });
                 });
@@ -402,10 +396,9 @@ impl eframe::App for TemplateApp {
                     ui.add_space(3.);
 
                     // Custom button styles
-                    // Reference: button.rs | 
+                    // Reference: button.rs & style.rs
                     let styles = ui.style_mut();
                     styles.spacing.button_padding = egui::vec2(10.0, 2.0);
-                    // styles.visuals.widgets.hovered.fg_stroke = Stroke::new(0.0, Color32::TRANSPARENT);
                     styles.visuals.widgets.hovered.expansion = 0.0;
                     styles.visuals.widgets.active.expansion = 0.0;
 
@@ -479,7 +472,6 @@ impl eframe::App for TemplateApp {
                             CCursor::new(0),
                             CCursor::new(self.label.len())
                         )
-                        //TODO: track the cursor position and set the cursor range to the current cursor position
                     ));
                     // Apply the changes
                     output.state.store(ctx, output.response.id);
@@ -498,31 +490,6 @@ impl eframe::App for TemplateApp {
             // Update the color of the OK button based on focus
             self.ok_button_color = Color32::from_rgb(89, 88, 86); // macOS gray button color
         }
-        //     // The central panel the region left after adding TopPanel's and SidePanel's
-        //     ui.heading("eframe template");
-
-        //     ui.horizontal(|ui| {
-        //         ui.label("Write something: ");
-        //         ui.text_edit_singleline(&mut self.label);
-        //     });
-
-        //     ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
-        //     if ui.button("Increment").clicked() {
-        //         self.value += 1.0;
-        //     }
-
-        //     ui.separator();
-
-        //     ui.add(egui::github_link_file!(
-        //         "https://github.com/emilk/eframe_template/blob/main/",
-        //         "Source code."
-        //     ));
-
-        //     ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
-        //         powered_by_egui_and_eframe(ui);
-        //         egui::warn_if_debug_build(ui);
-        //     });
-        // });
     }
 
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
