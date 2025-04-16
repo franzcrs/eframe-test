@@ -14,7 +14,8 @@ use egui::epaint::Margin;
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct TemplateApp {
     // Example stuff:
-    label: String,
+    folder_name: String,
+    current_folder: String,
     #[serde(skip)] // This how you opt-out of serialization of a field
     stroke_color: Color32,
     is_focused: bool,
@@ -22,7 +23,6 @@ pub struct TemplateApp {
     selection_color: Color32,
     #[serde(skip)] // This how you opt-out of serialization of a field
     ok_button_color: Color32,
-    current_folder: String,
 
     #[serde(skip)] // This how you opt-out of serialization of a field
     value: f32,
@@ -32,13 +32,13 @@ impl Default for TemplateApp {
     fn default() -> Self {
         Self {
             // Example stuff:
-            label: String::from("untitled folder"),
+            folder_name: String::from("untitled folder"),
+            current_folder: String::from("current folder name"),
             value: 2.7,
             stroke_color: Color32::TRANSPARENT,
             is_focused: false,
             selection_color: Color32::from_rgb(71,98,135), // macOS text selection color
             ok_button_color: Color32::from_rgb(48, 98, 212), // macOS blue button color
-            current_folder: String::from("current folder name"),
         }
     }
 }
@@ -181,6 +181,17 @@ impl TemplateApp {
         // }
 
         Default::default()
+    }
+
+    /// Setter for current_folder value
+    pub fn with_current_folder(mut self, name: String) -> Self {
+        self.current_folder = name;
+        self
+    }
+
+    /// Getter for folder_name value
+    pub fn get_result(&self) -> String {
+        self.folder_name.clone()
     }
 }
 
@@ -336,7 +347,7 @@ impl eframe::App for TemplateApp {
                 });
                 ui.add_space(4.5);
                 // ui.add(
-                //     egui::TextEdit::singleline(&mut self.label)
+                //     egui::TextEdit::singleline(&mut self.folder_name)
                 //         // .hint_text("Type something...") // Placeholder text
                 //         .desired_width(f32::INFINITY) // Make it take full width
                 //         .font(Name("TextInputBody".into()))
@@ -352,7 +363,7 @@ impl eframe::App for TemplateApp {
                         // visuals.selection.stroke = egui::Stroke::new(2.0, Color32::RED); // Change stroke color
                         visuals.selection.bg_fill = self.selection_color; // Change background fill color
                         // ui.add(
-                        //     egui::TextEdit::singleline(&mut self.label)
+                        //     egui::TextEdit::singleline(&mut self.folder_name)
                         //         // .hint_text("Type something...") // Placeholder text
                         //         .desired_width(f32::INFINITY) // Make it take full width
                         //         .font(Name("TextInputBody".into()))
@@ -364,7 +375,7 @@ impl eframe::App for TemplateApp {
                         //         ,
                         // );
                         // Use show() instead of ui.add() to get the output state
-                        let mut output = egui::TextEdit::singleline(&mut self.label)
+                        let mut output = egui::TextEdit::singleline(&mut self.folder_name)
                             .desired_width(f32::INFINITY)
                             .font(Name("TextInputBody".into()))
                             .margin(Margin::symmetric(3.0, 1.))
@@ -385,7 +396,7 @@ impl eframe::App for TemplateApp {
                             output.state.cursor.set_char_range(Some(
                                 CCursorRange::two(
                                     CCursor::new(0),
-                                    CCursor::new(self.label.len())
+                                    CCursor::new(self.folder_name.len())
                                 )
                             ));
                             // Apply the changes
@@ -423,7 +434,7 @@ impl eframe::App for TemplateApp {
 
                     if ui.add(create_button).clicked() {
                         // Handle create button click
-                        println!("Create clicked with value: {}", self.label);
+                        println!("Create clicked. New folder name: {}", self.folder_name);
                         // Reference: egui-0.30.0/src/ui.rs | https://github.com/emilk/egui/discussions/5340
                         let style_height = ui.text_style_height(&Name("DialogHeading".into()));
                         println!("Text Style Height = {}", style_height);
@@ -436,6 +447,8 @@ impl eframe::App for TemplateApp {
                         // Window center
                         let window_center = ctx.screen_rect().center();
                         println!("Window center = {:?}", window_center);
+                        // Close the window
+                        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                     }
 
                     ui.add_space(0.1); // Space between buttons
@@ -459,7 +472,7 @@ impl eframe::App for TemplateApp {
                         // Handle cancel button click
                         println!("Cancel clicked");
                         // Optional: reset the input field
-                        self.label = "untitled folder".to_owned();
+                        // self.folder_name = "untitled folder".to_owned();
                     }
                 });
             });
@@ -480,7 +493,7 @@ impl eframe::App for TemplateApp {
             //         output.state.cursor.set_char_range(Some(
             //             CCursorRange::two(
             //                 CCursor::new(0),
-            //                 CCursor::new(self.label.len())
+            //                 CCursor::new(self.folder_name.len())
             //             )
             //         ));
             //         // Apply the changes

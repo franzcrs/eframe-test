@@ -1,10 +1,29 @@
 #![warn(clippy::all, rust_2018_idioms)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
+use std::io::{self, Write};
+use std::sync::{Arc, Mutex};
+
 // When compiling natively:
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
+
+
+    // Ask for current folder name via CLI
+    print!("Enter current folder name: ");
+    io::stdout().flush().unwrap();
+    
+    let mut folder_name = String::new();
+    io::stdin().read_line(&mut folder_name).expect("Failed to read line");
+    folder_name = folder_name.trim().to_string();
+    
+    println!("Opening dialog for folder: {}", folder_name);
+    
+    // Create a shared result container
+    let result = Arc::new(Mutex::new(String::new()));
+    let result_clone = result.clone();
+
 
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
@@ -37,13 +56,51 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "eframe template",
         native_options,
-        Box::new(
+        Box::new( move
           |cc| 
+          // TODO: Pass variables in and out of the app without wrapper
+          {
+            // Pass current_folder value to the app
+            let app = eframe_test::TemplateApp::new(cc).with_current_folder(folder_name);
+            // Wrap the app to capture the result on exit
+            Ok(Box::new(AppWrapper {
+                app,
+                result: result_clone,
+            }))
+          }
           // cc.raw_window_handle = windowHandler.raw_window_handle().unwrap();
-          Ok(Box::new(eframe_test::TemplateApp::new(cc)))
+          // Ok(Box::new(eframe_test::TemplateApp::new(cc)))
           ),
-          
-    )
+    )?;
+
+    // Get the result after the app closes
+    let app_result = result.lock().unwrap();
+    println!("New folder name: {}", app_result);
+
+    Ok(())
+}
+
+// Wrapper to capture app state when closing
+struct AppWrapper {
+  app: eframe_test::TemplateApp,
+  result: Arc<Mutex<String>>,
+}
+
+impl eframe::App for AppWrapper {
+  fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+      self.app.update(ctx, frame);
+  }
+  
+  fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
+      self.app.clear_color(_visuals)
+  }
+
+  fn on_exit(&mut self, _:Option<&eframe::glow::Context>) {
+      // Save the result when the app is closing
+      let mut result = self.result.lock().unwrap();
+      *result = self.app.get_result();
+      // true // Allow the close
+  }
 }
 
 // When compiling to web using trunk:
