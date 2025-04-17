@@ -56,21 +56,21 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "eframe template",
         native_options,
-        Box::new( move
+        Box::new(
           |cc| 
           // TODO: Pass variables in and out of the app without wrapper
-          {
-            // Pass current_folder value to the app
-            let app = eframe_test::TemplateApp::new(cc).with_current_folder(folder_name);
-            // Wrap the app to capture the result on exit
-            Ok(Box::new(AppWrapper {
-                app,
-                result: result_clone,
-            }))
-          }
+          // {
+          //   // Pass current_folder value to the app
+          //   let app = eframe_test::TemplateApp::new(cc).with_current_folder(folder_name);
+          //   // Wrap the app to capture the result on exit
+          //   Ok(Box::new(AppWrapper {
+          //       app,
+          //       result: result_clone,
+          //   }))
+          // }
           // cc.raw_window_handle = windowHandler.raw_window_handle().unwrap();
-          // Ok(Box::new(eframe_test::TemplateApp::new(cc)))
-          ),
+          Ok(Box::new(eframe_test::TemplateApp::new(cc).with_current_folder(folder_name).with_result(result_clone)))
+          )
     )?;
 
     // Get the result after the app closes
@@ -78,29 +78,6 @@ fn main() -> eframe::Result {
     println!("New folder name: {}", app_result);
 
     Ok(())
-}
-
-// Wrapper to capture app state when closing
-struct AppWrapper {
-  app: eframe_test::TemplateApp,
-  result: Arc<Mutex<String>>,
-}
-
-impl eframe::App for AppWrapper {
-  fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-      self.app.update(ctx, frame);
-  }
-  
-  fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
-      self.app.clear_color(_visuals)
-  }
-
-  fn on_exit(&mut self, _:Option<&eframe::glow::Context>) {
-      // Save the result when the app is closing
-      let mut result = self.result.lock().unwrap();
-      *result = self.app.get_result();
-      // true // Allow the close
-  }
 }
 
 // When compiling to web using trunk:

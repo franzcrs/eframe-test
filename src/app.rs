@@ -8,6 +8,7 @@ use std::collections::BTreeMap;
 
 use egui::TextStyle::*;
 use egui::epaint::Margin;
+use std::sync::{Arc, Mutex};
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -16,15 +17,17 @@ pub struct TemplateApp {
     // Example stuff:
     folder_name: String,
     current_folder: String,
-    #[serde(skip)] // This how you opt-out of serialization of a field
+    #[serde(skip)] // This is how you opt-out of serialization of a field
+    result: Arc<Mutex<String>>, // Output result
+    #[serde(skip)] // This is how you opt-out of serialization of a field
     stroke_color: Color32,
     is_focused: bool,
-    #[serde(skip)] // This how you opt-out of serialization of a field
+    #[serde(skip)] // This is how you opt-out of serialization of a field
     selection_color: Color32,
-    #[serde(skip)] // This how you opt-out of serialization of a field
+    #[serde(skip)] // This is how you opt-out of serialization of a field
     ok_button_color: Color32,
 
-    #[serde(skip)] // This how you opt-out of serialization of a field
+    #[serde(skip)] // This is how you opt-out of serialization of a field
     value: f32,
 }
 
@@ -34,6 +37,7 @@ impl Default for TemplateApp {
             // Example stuff:
             folder_name: String::from("untitled folder"),
             current_folder: String::from("current folder name"),
+            result: Arc::new(Mutex::new(String::new())), // Output result
             value: 2.7,
             stroke_color: Color32::TRANSPARENT,
             is_focused: false,
@@ -186,6 +190,12 @@ impl TemplateApp {
     /// Setter for current_folder value
     pub fn with_current_folder(mut self, name: String) -> Self {
         self.current_folder = name;
+        self
+    }
+
+    /// Setter for the result variable
+    pub fn with_result(mut self, result: Arc<Mutex<String>>) -> Self {
+        self.result = result;
         self
     }
 
@@ -519,6 +529,13 @@ impl eframe::App for TemplateApp {
         // _visuals.window_fill().to_normalized_gamma_f32()
         // egui::Color32::from_gray(27).to_normalized_gamma_f32()
         Color32::from_rgb(33, 32, 29).to_normalized_gamma_f32()
+    }
+
+    // Reference: https://qiita.com/8bitTD/items/7d745bbf90a82aaffd7f
+    fn on_exit(&mut self, _:Option<&eframe::glow::Context>) {
+        // Save the result when the app is closing
+        let mut result = self.result.lock().unwrap();
+        *result = self.get_result();
     }
 }
 
