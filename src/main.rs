@@ -58,7 +58,6 @@ fn main() -> eframe::Result {
         native_options,
         Box::new(
           |cc| 
-          // TODO: Pass variables in and out of the app without wrapper
           // {
           //   // Pass current_folder value to the app
           //   let app = eframe_test::TemplateApp::new(cc).with_current_folder(folder_name);
@@ -75,7 +74,12 @@ fn main() -> eframe::Result {
 
     // Get the result after the app closes
     let app_result = result.lock().unwrap();
-    println!("New folder name: {}", app_result);
+    // Verify if app_result is "" or not
+    if app_result.is_empty() {
+        println!("No folder name provided.");
+    } else {
+        println!("New folder name: {}", *app_result);
+    }
 
     Ok(())
 }

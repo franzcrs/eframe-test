@@ -444,7 +444,7 @@ impl eframe::App for TemplateApp {
 
                     if ui.add(create_button).clicked() {
                         // Handle create button click
-                        println!("Create clicked. New folder name: {}", self.folder_name);
+                        println!("Create clicked. folder_name: {}", self.folder_name);
                         // Reference: egui-0.30.0/src/ui.rs | https://github.com/emilk/egui/discussions/5340
                         let style_height = ui.text_style_height(&Name("DialogHeading".into()));
                         println!("Text Style Height = {}", style_height);
@@ -479,10 +479,12 @@ impl eframe::App for TemplateApp {
 
 
                     if ui.add(cancel_button).clicked() {
+                        // Reset the input field
+                        self.folder_name = String::from("");
                         // Handle cancel button click
-                        println!("Cancel clicked");
-                        // Optional: reset the input field
-                        // self.folder_name = "untitled folder".to_owned();
+                        println!("Cancel clicked. folder_name: {}", self.folder_name);
+                        // Close the window
+                        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                     }
                 });
             });
